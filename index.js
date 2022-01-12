@@ -80,7 +80,7 @@ const pixelate = async (file) => {
                 topLeft = faceCoordinates[i][3] ?? null;
                 
                 img.region(bottomRight.x-bottomLeft.x, topRight.y-bottomRight.y, bottomLeft.x, bottomLeft.y)
-                    .blur(0, 16)
+                    .blur(0, 32)
                     
             }
 
@@ -106,8 +106,8 @@ const pixelate = async (file) => {
         await storage.bucket(finalBucketName).upload(tempFilePath, options)
         console.log(`Finished upload of ${tempFilePath} to ${options.destination}`);
     } catch (err) {
-        console.log(err)
-        throw new Error(`Unable to upload blurred image ${tempFilePath}, ${err}`);
+        console.log(`Unable to upload blurred image ${tempFilePath}, ${err}`)
+        return null;
     }
 
     return fs.unlink(tempFilePath, (err) => {
