@@ -1,0 +1,20 @@
+{
+  "name": "ourvoice_pixelation",
+  "version": "1.0.0",
+  "description": "Cloud function that triggers a blur feature upon facial recognition",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npx functions-framework --debug-brk --target=pixelateTrigger [--signature-type=http]"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/storage": "^5.16.1",
+    "@google-cloud/vision": "^2.4.1",
+    "gm": "^1.23.1"
+  },
+  "devDependencies": {
+    "@google-cloud/functions-framework": "^2.1.0"
+  }
+}
