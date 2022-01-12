@@ -1,21 +1,21 @@
 const fs = require('fs')
-const gm = require('gm').subClass({imageMagick: true});
+const gm = require('gm').subClass({ imageMagick: true });
 const path = require('path');
 const vision = require('@google-cloud/vision');
-const {Storage} = require('@google-cloud/storage');
+const { Storage } = require('@google-cloud/storage');
 const keyFilename = 'som-rit-ourvoice-cloud-storage-key.json';
-const {projectId, finalBucketName} = process.env //Alter for local testing
+const { projectId, finalBucketName } = process.env //Alter for local testing
 
 let client, storage;
 
 if (fs.existsSync(keyFilename)) {
-    client = new vision.ImageAnnotatorClient({keyFilename});
+    client = new vision.ImageAnnotatorClient({ keyFilename });
     storage = new Storage({ projectId, keyFilename });
 } else {
     client = new vision.ImageAnnotatorClient();
-    storage = new Storage({projectId})
+    storage = new Storage({ projectId })
 }
-  
+
 /**
  * HTTP Cloud Function.
  *
@@ -35,17 +35,15 @@ exports.pixelateTrigger = async (file, context) => {
 
 const pixelate = async (file) => {
     var imageFile, encoded, tempFilePath;
-    if(!file) { // For local testing
-        imageFile = fs.readFileSync('./test.jpeg');
-        encoded = Buffer.from(imageFile).toString('base64');
-        tempFilePath = './test.jpeg';
+    if (!file) { // For local testing
+        tempFilePath = './licenseface.jpeg';
     } else { // triggered cloud fx
         tempFilePath = `/tmp/${path.parse(file.name).base}`;
         console.log(`attempting to save ${file.name} to ${tempFilePath} `)
 
         await storage.bucket('transform_ov_walk_files').file(file.name) //Save current file locally to VM temp dir
             .download({ destination: tempFilePath })
-            .then(()=> {
+            .then(() => {
                 console.log(`Finished download of ${file.name} to temp filepath in local VM :  ${tempFilePath}`);
             })
             .catch((err) => {
@@ -54,34 +52,38 @@ const pixelate = async (file) => {
                 return null;
             })
     }
-    
+
     imageFile = fs.readFileSync(tempFilePath);
     encoded = Buffer.from(imageFile).toString('base64');
-    
-    const request = {
-        image: {content: encoded},
-        features: [{type: 'FACE_DETECTION', maxResults: '25'}]
-    };
-    
-    let [response] = await client.annotateImage(request); //Check if there are faces in the image    
 
-    if(response.faceAnnotations.length) {
+    const request = {
+        image: { content: encoded },
+        features: [
+            { type: 'FACE_DETECTION', maxResults: '25' },
+            { type: 'TEXT_DETECTION' },
+            { type: 'OBJECT_LOCALIZATION' }
+        ]
+    };
+
+    let [response] = await client.annotateImage(request); //Check if there are faces in the image    
+    let img = gm(tempFilePath)
+
+    if (response.faceAnnotations.length) {
         console.log(`faces detected in image ${tempFilePath}`);
 
-        let faceCoordinates = response.faceAnnotations.map((e) =>  e.boundingPoly.vertices)
-        let img = gm(tempFilePath)
-        let bottomLeft, bottomRight, topRight, topLeft; 
-        
+        let faceCoordinates = response.faceAnnotations.map((e) => e.boundingPoly.vertices)
+        let bottomLeft, bottomRight, topRight, topLeft;
+
         await new Promise((resolve, reject) => {
-            for(let i in faceCoordinates) {
+            for (let i in faceCoordinates) {
                 bottomLeft = faceCoordinates[i][0] ?? null;
                 bottomRight = faceCoordinates[i][1] ?? null;
                 topRight = faceCoordinates[i][2] ?? null;
                 topLeft = faceCoordinates[i][3] ?? null;
-                
-                img.region(bottomRight.x-bottomLeft.x, topRight.y-bottomRight.y, bottomLeft.x, bottomLeft.y)
-                    .blur(0, 32)
-                    
+
+                img.region(bottomRight.x - bottomLeft.x, topRight.y - bottomRight.y, bottomLeft.x, bottomLeft.y)
+                    .blur(0, 20)
+
             }
 
             //rewrite to the same path
@@ -96,7 +98,44 @@ const pixelate = async (file) => {
             });
         });
     }
-    
+
+    if (response.localizedObjectAnnotations.length) { //License plates
+        let size = await new Promise((resolve, reject) => { //Grab image dimensions
+            gm(tempFilePath).size((err, size) => {
+                if (!err)
+                    resolve([size.width, size.height]);
+                reject(err);
+            })
+        });
+
+        let normalized = response.localizedObjectAnnotations.filter(e => e.name === 'License plate').map(e => e.boundingPoly.normalizedVertices)
+        await new Promise((resolve, reject) => {
+            for (let i in normalized) {
+                bottomLeft = normalized[i][0] ?? null;
+                bottomRight = normalized[i][1] ?? null;
+                topRight = normalized[i][2] ?? null;
+                topLeft = normalized[i][3] ?? null;
+
+                img.region(
+                    bottomRight.x * size[0] - bottomLeft.x * size[0],
+                    topRight.y * size[1] - bottomRight.y * size[1],
+                    bottomLeft.x * size[0],
+                    bottomLeft.y * size[1]
+                ).blur(0, 20)
+            }
+
+            img.write(tempFilePath, function (err, stdout) {
+                if (err) {
+                    console.error('Failed to blur license plates.', err);
+                    reject(err);
+                } else {
+                    console.log(`Successfully Blurred license plates for: ${tempFilePath}`);
+                    resolve(stdout);
+                }
+            });
+        });
+    }
+
     // Upload to production bucket
     const options = {
         destination: file.name
@@ -111,7 +150,7 @@ const pixelate = async (file) => {
     }
 
     return fs.unlink(tempFilePath, (err) => {
-        if (err) 
+        if (err)
             console.log(err);
         else
             console.log(`Deleted ${tempFilePath} successfully, exiting`)
