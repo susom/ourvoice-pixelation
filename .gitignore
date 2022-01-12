@@ -1,7 +1,4 @@
 *workspace
 node_modules
 som-rit-ourvoice-cloud-storage-key.json
-*.png
-*.jpg
-*.jpeg
 .env.yaml
