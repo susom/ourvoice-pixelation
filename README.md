@@ -1,3 +1,7 @@
+![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)
+![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+
+
 # Ourvoice automatic pixelation
 
 - This function will detect faces on uploaded images, obfuscate them, and save the resulting output to a google bucket.
@@ -15,5 +19,11 @@ Note that an `.env.yaml` file will need to be present with the following format:
     projectId: <PROJECTID>
     finalBucketName: <BUCKETNAME>
 ```
+
+Before
+![This is an image](/assets/before.jpeg)
+
+After
+![This is an image](/assets/after.jpeg)
 
 
