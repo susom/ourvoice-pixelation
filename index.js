@@ -72,17 +72,20 @@ const pixelate = async (file) => {
         console.log(`faces detected in image ${tempFilePath}`);
 
         let faceCoordinates = response.faceAnnotations.map((e) => e.boundingPoly.vertices)
-        let bottomLeft, bottomRight, topRight, topLeft;
+        let bottomLeft, bottomRight, topRight;
 
         await new Promise((resolve, reject) => {
             for (let i in faceCoordinates) {
                 bottomLeft = faceCoordinates[i][0] ?? null;
                 bottomRight = faceCoordinates[i][1] ?? null;
                 topRight = faceCoordinates[i][2] ?? null;
-                topLeft = faceCoordinates[i][3] ?? null;
 
-                img.region(bottomRight.x - bottomLeft.x, topRight.y - bottomRight.y, bottomLeft.x, bottomLeft.y)
-                    .blur(0, 20)
+                img.region(
+                    bottomRight.x - bottomLeft.x,
+                    topRight.y - bottomRight.y,
+                    bottomLeft.x, 
+                    bottomLeft.y
+                ).blur(0, 24)
 
             }
 
@@ -99,7 +102,11 @@ const pixelate = async (file) => {
         });
     }
 
-    if (response.localizedObjectAnnotations.length) { //License plates
+    let normalized = response.localizedObjectAnnotations.filter(e => e.name === 'License plate').map(e => e.boundingPoly.normalizedVertices)
+
+    if (normalized.length) { //License plates detected
+        console.log(`License plates detected in image ${tempFilePath}`);
+
         let size = await new Promise((resolve, reject) => { //Grab image dimensions
             gm(tempFilePath).size((err, size) => {
                 if (!err)
@@ -107,21 +114,18 @@ const pixelate = async (file) => {
                 reject(err);
             })
         });
-
-        let normalized = response.localizedObjectAnnotations.filter(e => e.name === 'License plate').map(e => e.boundingPoly.normalizedVertices)
         await new Promise((resolve, reject) => {
             for (let i in normalized) {
                 bottomLeft = normalized[i][0] ?? null;
                 bottomRight = normalized[i][1] ?? null;
                 topRight = normalized[i][2] ?? null;
-                topLeft = normalized[i][3] ?? null;
 
                 img.region(
                     bottomRight.x * size[0] - bottomLeft.x * size[0],
                     topRight.y * size[1] - bottomRight.y * size[1],
                     bottomLeft.x * size[0],
                     bottomLeft.y * size[1]
-                ).blur(0, 20)
+                ).blur(0, 24)
             }
 
             img.write(tempFilePath, function (err, stdout) {
@@ -135,6 +139,7 @@ const pixelate = async (file) => {
             });
         });
     }
+
 
     // Upload to production bucket
     const options = {
