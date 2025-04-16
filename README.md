@@ -10,7 +10,7 @@
 The following command can be run to deploy on cloud functions: 
 
 ```
-gcloud functions deploy pixelateTrigger --runtime nodejs14 --trigger-resource transform_ov_walk_files --trigger-event google.storage.object.finalize --max-instances 20 --timeout 120s --env-vars-file .env.yaml
+gcloud functions deploy pixelateTrigger --runtime nodejs18 --trigger-resource transform_ov_walk_files --trigger-event google.storage.object.finalize --max-instances 20 --memory 512MB --timeout 120s --env-vars-file .env.yaml --docker-registry=artifact-registry
 ```
 
 Note that an `.env.yaml` file will need to be present with the following format:
@@ -21,9 +21,9 @@ Note that an `.env.yaml` file will need to be present with the following format:
 ```
 
 Before
-![This is an image](/assets/before.jpeg)
+![This is an image](./assets/before.jpeg)
 
 After
-![This is an image](/assets/after.jpeg)
+![This is an image](./assets/after.jpeg)
 
 
