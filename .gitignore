@@ -2,3 +2,4 @@
 node_modules
 som-rit-ourvoice-cloud-storage-key.json
 .env.yaml
+.idea/
