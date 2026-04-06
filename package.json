@@ -9,6 +9,9 @@
   },
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "@tootallnate/once": ">=3.0.1"
+  },
   "dependencies": {
     "@google-cloud/storage": "^5.16.1",
     "@google-cloud/vision": "^5.1.0",
